@@ -1,0 +1,212 @@
+#include <bits/stdc++.h>
+//#include <string>
+#include <queue>
+
+using namespace std;
+
+//Node for Customer
+struct Customer {
+    int id;
+    string name;
+    int bookedRoomNumber; // Room number assigned to the customer
+    Customer* next;
+
+    Customer(int _id, const string& _name) : id(_id), name(_name), bookedRoomNumber(-1), next(nullptr) {}
+};
+
+// Function to insert a customer and assign the next available room
+void insertCustomer(Customer*& head, int id, const string& name, queue<int>& availableRooms) {
+    Customer* newCustomer = new Customer(id, name);
+
+    if (head == nullptr) {
+        head = newCustomer;
+    } else {
+        Customer* temp = head;
+        while (temp->next != nullptr) {
+            temp = temp->next;
+        }
+        temp->next = newCustomer;
+    }
+
+    // Assign the next available room to the customer
+    if (!availableRooms.empty()) {
+        newCustomer->bookedRoomNumber = availableRooms.front();
+        availableRooms.pop();
+    }
+}
+/////Function to search customer's using BFS
+Customer* findCustomerBFS(Customer* head, const string searchName) {
+    queue<Customer*> q;
+    if (head != nullptr) {
+        q.push(head);
+    }
+    while (!q.empty()) {
+        Customer* current = q.front();
+        q.pop();
+        if (current->name == searchName) {
+            return current;
+        }
+        if (current->next != nullptr) {
+            q.push(current->next);
+        }
+    }
+    return nullptr;
+}
+
+////Function to search customer's using DFS 
+Customer* findCustomerDFS(Customer* head, const string searchName) {
+    if (head == nullptr) return nullptr;
+    if (head->name == searchName) return head;
+    return findCustomerDFS(head->next, searchName);
+}
+////Function to display customers Sorted with their booked rooms
+Customer* merge(Customer* left, Customer* right) {
+    if (!left) return right;
+    if (!right) return left;
+    if (left->id < right->id) {
+        left->next = merge(left->next, right);
+        return left;
+    } else {
+        right->next = merge(left, right->next);
+        return right;
+    }
+}
+
+Customer* mergeSort(Customer* head) {
+    if (!head || !head->next) return head;
+    Customer* slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+    Customer* mid = slow->next;
+    slow->next = nullptr;
+    return merge(mergeSort(head), mergeSort(mid));
+}
+
+
+
+// Function to delete a customer's booking and make the room available
+void deleteBooking(Customer*& head, int id, queue<int>& availableRooms) {
+    Customer* current = head;
+    while (current != nullptr) {
+        if (current->id == id && current->bookedRoomNumber != -1) {
+            int roomNumber = current->bookedRoomNumber;
+            current->bookedRoomNumber = -1; // Mark as deleted
+            availableRooms.push(roomNumber); // Add the room back to available rooms
+            return;
+        }
+        current = current->next;
+    }
+}
+
+// Function to display customers with their booked rooms
+void showCustomers(Customer* head) {
+    if (head == nullptr) {
+        cout << "No customers." << endl;
+        return;
+    }
+    cout << "Customer Information:" << endl;
+    while (head != nullptr) {
+        if (head->bookedRoomNumber != -1) { // Ignore deleted customers
+            cout << "Customer ID: " << head->id << ", Name: " << head->name << ", Booked Room: " << head->bookedRoomNumber << endl;
+        }
+        head = head->next;
+    }
+}
+
+// Function to display available rooms
+void showAvailableRooms(const queue<int>& availableRooms) {
+    cout << "Available Rooms:" << endl;
+    queue<int> tempRooms = availableRooms;
+    while (!tempRooms.empty()) {
+        cout << "Room Number: " << tempRooms.front() << endl;
+        tempRooms.pop();
+    }
+}
+
+int main() {
+    Customer* customers = nullptr;
+    queue<int> availableRooms;
+    for (int roomNumber = 101; roomNumber <= 110; ++roomNumber) {
+        availableRooms.push(roomNumber); // Initialize available rooms from 101 to 110
+    }
+
+    int choice, id;
+    string name;
+
+    do{
+        system("clear");
+        cout << "\nHotel Management System" << endl;
+        cout << "1. Insert Customer" << endl;
+        cout << "2. Delete Customer Booking" << endl;
+        cout << "3. Show Customers" << endl;
+        cout << "4. Show Available Rooms" << endl;
+        cout << "5. Search Customer Details" << endl;
+        cout << "6. Sort Customers" << endl;
+        cout << "7. Exit" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+
+            case 1:
+                cout << "Enter Customer ID: ";
+                cin >> id;
+                cout << "Enter Customer Name: ";
+                cin >> name;
+                insertCustomer(customers, id, name, availableRooms);
+                cout << "Customer inserted." << endl;
+                break;
+            case 2:
+                cout << "Enter Customer ID to Delete Booking: ";
+                cin >> id;
+                deleteBooking(customers, id, availableRooms);
+                break;
+            case 3:
+                showCustomers(customers);
+                break;
+            case 4:
+                showAvailableRooms(availableRooms);
+                break;
+
+          case 5: // Assuming 6 is the new menu option for searching customers
+              {
+                  cout << "Enter the customer name to search: ";
+                  string initial;
+                  cin >> initial;
+                  Customer* result = findCustomerBFS(customers, initial); 
+                  if (result != nullptr) {
+                      cout << "Customer found: " << result->name << " in Room " << result->bookedRoomNumber << endl;
+                  } else {
+                      cout << "No customer found with that name." << endl;
+                  }
+              }
+              break;
+
+          case 6: // Assuming 7 is the new menu option for sorting customers
+              {
+                  cout << "Sorting customers by ID..." << endl;
+                  customers = mergeSort(customers); // Assuming a function that implements merge sort
+                  cout << "Customers sorted." << endl;
+                  showCustomers(customers);
+              }
+              break;
+            case 7:
+                // Free memory and exit
+                while (customers != nullptr) {
+                    Customer* temp = customers;
+                    customers = customers->next;
+                    delete temp;
+                }
+                return 0;
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+        }
+    }while (true);
+
+    return 0;
+}
+
+
+//-----------By TechTitans----------
